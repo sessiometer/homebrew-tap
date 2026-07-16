@@ -29,7 +29,7 @@ From there the swap/monitor loop runs headless: `sessiometer run` for a foregrou
 |------|------|
 | [`Formula/sessiometer.rb`](Formula/sessiometer.rb) | The CLI + daemon formula (source build, HEAD-only) |
 
-The formula is a **one-way mirror** of the canonical [`Formula/sessiometer.rb`](https://github.com/alexey-pelykh/sessiometer/blob/main/Formula/sessiometer.rb) that lives in the source repo — the source copy stays authoritative; do not hand-edit the copy here. (A release-CI job keeps this mirror in sync on tagged releases.)
+The formula is a **one-way mirror** of the canonical [`Formula/sessiometer.rb`](https://github.com/alexey-pelykh/sessiometer/blob/main/Formula/sessiometer.rb) that lives in the source repo — the source copy stays authoritative; do not hand-edit the copy here. Today the mirror is seeded and updated **by hand**; a release-CI job *will* sync it automatically on tagged releases ([sessiometer#559](https://github.com/alexey-pelykh/sessiometer/issues/559)).
 
 ## Unofficial
 
