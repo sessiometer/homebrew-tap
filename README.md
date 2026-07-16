@@ -2,7 +2,7 @@
 
 The [Homebrew](https://brew.sh) tap for **[sessiometer](https://github.com/alexey-pelykh/sessiometer)** — manage multiple Claude Code accounts and swap credentials before exhaustion.
 
-This tap delivers the **CLI + daemon** — sessiometer's headless, scripting channel for terminal and automation use. The macOS menu-bar `.app` will land here too, as a Homebrew **cask**, once it is signed + notarized (not yet shipped); it is a separate namespace in this same tap.
+This tap delivers the **CLI + daemon** — sessiometer's headless, scripting channel for terminal and automation use. The macOS menu-bar `.app` will land here too, as a Homebrew **cask** in `Casks/` beside `Formula/`, once it is signed + notarized (not yet shipped).
 
 ## Install
 
