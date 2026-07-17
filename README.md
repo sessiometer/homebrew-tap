@@ -15,6 +15,14 @@ sessiometer is still **pre-release** — there is no tagged version yet, so inst
 
 Once the first stable release is tagged, the formula gains a `url` + `sha256` stanza and a plain `brew install sessiometer/tap/sessiometer` (no `--HEAD`) will work too.
 
+**No `brew trust` step is needed** for the commands above. Homebrew's default-on `HOMEBREW_REQUIRE_TAP_TRUST` won't load formulae from an untrusted third-party (non-official) tap — so `brew tap-info sessiometer/tap` reports it as `Untrusted` — but Homebrew treats naming the tap (`sessiometer/tap`) or the fully-qualified formula (`sessiometer/tap/sessiometer`) on the command line as explicit consent, so the gate never fires here. Each command above names one or the other on purpose.
+
+The gate only fires if you refer to the formula by its **bare short name before it is installed** — e.g. `brew info sessiometer` on a clean machine — which Homebrew refuses with *"Refusing to load formula … from untrusted tap."* Use the fully-qualified name, or trust the tap once:
+
+```sh
+brew trust --formula sessiometer/tap/sessiometer   # or trust the whole tap: brew trust sessiometer/tap
+```
+
 Verify the build:
 
 ```sh
