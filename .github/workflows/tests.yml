@@ -1,0 +1,81 @@
+# Tap CI (issue #1) — the tap-side half of the "no CI covers the formula — on either side" gap
+# recorded in ADR-0021, and the root cause of alexey-pelykh/sessiometer#566: a stanza-order defect
+# reached this tap because nothing audited the formula on the way in.
+#
+# Division of labour with the canonical repo (alexey-pelykh/sessiometer#567): the canonical
+# `formula` job is deliberately STATIC-ONLY (`brew style` + `brew audit --strict` — no install, no
+# `test do`, no bottle) so the crate is compiled exactly once, here. This is the full job: it lints
+# AND builds. `brew test-bot` is the standard tap CI that `brew tap-new` generates; this file is
+# that generated shape, adapted to a macOS-only, HEAD-only, bottle-less tap (deviations noted below).
+#
+# How the steps map onto issue #1's acceptance criteria — verified against the live test-bot source,
+# Homebrew/brew `Library/Homebrew/test_bot/tap_syntax.rb` (the old Homebrew/homebrew-test-bot tap was
+# archived and folded into brew in 2025-09):
+#   --only-tap-syntax → `brew style` (L21) + `brew readall` (L28) + `brew audit` (L31)  ("brew style (audit)")
+#   --only-formulae   → source build + the formula's `test do`                           ("build + test do")
+
+name: brew test-bot
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Least privilege, read-only — the official template's set. `brew test-bot` reads PR and check
+# metadata to work out which formulae a PR touched; nothing in this workflow writes.
+permissions:
+  actions: read
+  checks: read
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  test-bot:
+    name: test-bot
+    # Single macOS runner, not the generated template's `[ macos-15-intel, macos-26 ]` + Linux
+    # matrix. `Formula/sessiometer.rb` is `depends_on :macos`, so a Linux row could only repeat the
+    # static syntax check and would skip the build outright. Intel is dropped deliberately: this job
+    # validates the FORMULA (stanza order, install recipe, `test do`); the crate's own cross-arch
+    # portability belongs to the canonical repo, which itself builds on `macos-latest` only — a
+    # tap-side Intel row would assert a claim the project does not otherwise test, on a tier
+    # Homebrew drops to Tier 3 in Sept 2026. macOS runners are free and unlimited on public repos,
+    # so this is a scope call, not a cost one.
+    runs-on: macos-latest
+    steps:
+      - name: Set up Homebrew
+        # Pinned to the exact SHA the current `brew tap-new` template emits, matching the canonical
+        # repo's pin-actions-to-a-SHA convention. The action recognises an `<owner>/homebrew-<name>`
+        # repo and checks it out as the tap itself — here, `sessiometer/tap`.
+        # The template's follow-on RubyGems-cache step is dropped — a pure speed-up, needless for a
+        # rarely-run tap CI. It was the only consumer of this step's `id:` (it read the action's
+        # `gems-path`/`gems-hash` outputs), so the `id:` is dropped with it.
+        uses: Homebrew/actions/setup-homebrew@1f8e202ffddf94def7f42f6fa3a482e821489f9c # 2026.07.10.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Clean up the runner before testing
+        run: brew test-bot --only-cleanup-before
+
+      - name: Set up the test-bot environment
+        run: brew test-bot --only-setup
+
+      # Cheap (nothing compiles) and covers every formula in the tap, so it runs on pushes as well
+      # as PRs — that keeps `main` continuously audited rather than only the files a PR happened to
+      # touch, which is exactly the hole #566 fell through.
+      - name: brew style + readall + audit (tap syntax)
+        run: brew test-bot --only-tap-syntax
+
+      # PR-only, as in the generated template: test-bot builds the formulae a PR *changes*. Formula
+      # updates land here as PRs (the mirror is refreshed by PR — e.g. #4), so the build runs when it
+      # matters; re-running it on the merge push to `main` would only recompile bytes the PR already
+      # built green. `main` is unprotected, so a direct hand-push would skip this build step — but
+      # --only-tap-syntax above still lints+audits on every push, which is the #566-class guard.
+      # The template's bottle-upload step is intentionally omitted — this tap is HEAD-only and
+      # publishes no bottles, so `*.bottle.*` would never match and the upload would always no-op.
+      - name: Build changed formulae + run their test do
+        if: github.event_name == 'pull_request'
+        run: brew test-bot --only-formulae
